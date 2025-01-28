@@ -75,29 +75,50 @@ class Database:
             # Print any errors that occur during the execution of the query
             print(error)
 
-    def create_schema(self, table_name: str, schema: str) -> None:
+    def infer_df_schema(self, table_name: str, df: pd.DataFrame) -> str:
         """
-        Create a schema in a PostgreSQL database.
+        Infers the schema of a Pandas DataFrame and generates a PostgreSQL CREATE TABLE statement.
 
-        This method creates a table in the PostgreSQL database using the
-        provided schema. The table is created with the specified column names
-        and data types.
-
-        Parameters:
-            table_name (str): The name of the table to be created.
-            schema (str): A comma-separated string of column names and data types.
+        Args:
+            table_name (str): The name of the PostgreSQL table.
+            df (pd.DataFrame): The DataFrame to infer the schema from.
 
         Returns:
-            None
+            str: A PostgreSQL CREATE TABLE statement.
         """
-        # Create the query to create the table in the PostgreSQL database
-        query = f"""CREATE TABLE IF NOT EXISTS {table_name} ({schema}); """
+        # Define a mapping of Pandas dtypes to PostgreSQL types
+        dtype_mapping = {
+            'int64': 'BIGINT',
+            'int32': 'INTEGER',
+            'float64': 'DOUBLE PRECISION',
+            'float32': 'REAL',
+            'bool': 'BOOLEAN',
+            'datetime64[ns]': 'TIMESTAMP',
+            'datetime64[ns, UTC]': 'TIMESTAMP WITH TIME ZONE',
+            'timedelta64[ns]': 'INTERVAL',
+            'object': 'TEXT',
+            'category': 'TEXT'
+        }
 
-        # Execute the query to create the table
-        self.execute_query(query)
+        # Function to map dtypes
+        def map_dtype(dtype):
+            dtype_str = str(dtype)
+            return dtype_mapping.get(dtype_str, 'TEXT')  # Default to TEXT for unknown types
 
-        # Print a message indicating that the schema was created successfully
-        print("created/updated schema succesful")
+        # Infer columns and their types
+        columns = []
+        for col in df.columns:
+            col_name = col
+            col_type = map_dtype(df[col].dtype)
+            columns.append(f"{col_name} {col_type}")
+        columns = (", ".join(columns))
+
+
+        # Generate the CREATE TABLE statement
+        create_table_statement = f"""CREATE TABLE IF NOT EXISTS {table_name} ({columns}) """
+
+        return create_table_statement
+
 
     def put_df(self, df: pd.DataFrame, table: str) -> None:
         """
