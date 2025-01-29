@@ -91,6 +91,3 @@ class TriviaQuestion:
         # Return the DataFrame
         return df
 
-
-if __name__ == "__main__":
-    trivia = TriviaQuestion(n_questions, category, difficulty, type)
